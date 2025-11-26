@@ -21,7 +21,7 @@ class RupioApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Rupio',
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
+        theme: AppTheme.darkTheme,
         initialRoute: AppRoutes.home,
         onGenerateRoute: AppRoutes.generateRoute,
       ),
