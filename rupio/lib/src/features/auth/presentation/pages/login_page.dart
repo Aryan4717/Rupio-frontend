@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 /// Login Page - Authentication screen with email, password, and social login
 class LoginPage extends StatefulWidget {
@@ -12,12 +14,137 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleLogin() async {
+    // Validate fields
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      _showError('Please fill in all fields');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://10.0.2.2:3000/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': _emailController.text,
+          'password': _passwordController.text,
+        }),
+      );
+
+      setState(() => _isLoading = false);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _showSuccess('Login successful');
+        
+        // TODO: Store tokens and user data
+        // final accessToken = data['accessToken'];
+        // final refreshToken = data['refreshToken'];
+        // final user = data['user'];
+        
+        // Navigate to welcome page after successful login
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/welcome');
+        }
+      } else if (response.statusCode == 401 || response.statusCode == 404) {
+        // User not found or invalid credentials
+        final error = jsonDecode(response.body);
+        _showError(error['message'] ?? 'Invalid email or password');
+        
+        // Ask if user wants to sign up
+        _showSignupDialog();
+      } else {
+        final error = jsonDecode(response.body);
+        _showError(error['message'] ?? 'Login failed');
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showError('Network error. Please try again.');
+    }
+  }
+
+  void _showSignupDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A0A2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Account Not Found',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Would you like to create a new account?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white.withOpacity(0.6)),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/signup');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE91E8C),
+            ),
+            child: const Text('Sign Up'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFFE91E8C),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   @override
@@ -121,7 +248,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () => Navigator.pushNamed(context, '/signup'),
                         child: const Text(
                           'Sign up',
                           style: TextStyle(
@@ -137,8 +264,8 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 16),
                 // Continue button
                 _buildPrimaryButton(
-                  text: 'Continue',
-                  onPressed: () {},
+                  text: _isLoading ? 'Logging in...' : 'Continue',
+                  onPressed: _isLoading ? () {} : _handleLogin,
                 ),
                 const SizedBox(height: 24),
                 // Or divider
@@ -267,13 +394,22 @@ class _LoginPageState extends State<LoginPage> {
           ),
           elevation: 0,
         ),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }
@@ -392,4 +528,3 @@ class _GoogleLogoPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
