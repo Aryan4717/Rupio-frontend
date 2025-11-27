@@ -31,9 +31,19 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   flutter_native_splash: ^2.4.0
+  flutter_launcher_icons: ^0.14.1
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/splash/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/splash/rupio-logo.png"
+  adaptive_icon_background: "#0D0D0D"
+  adaptive_icon_foreground: "assets/splash/rupio-logo.png"
 
 flutter_native_splash:
   color: "#0D0D0D"
